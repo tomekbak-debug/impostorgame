@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Impostor – gra słowna (1–10 osób, jasny motyw)</title>
+  <meta name="description" content="Gra słowna Impostor: 1–10 osób, jedna osoba ma kartę IMPOSTOR. Losowanie hasła po starcie rundy, opóźnione przekazywanie urządzenia z odliczaniem.">
+  <style>
+    :root {
+      --gap: 14px; --radius: 14px;
+      --bg: #f6f8fb; --text: #0f1a2b;
+      --card: #ffffff; --border: #e5eaf2;
+      --accent: #2952ff; --muted: #6b7a90;
+      --chip: #f0f3f9;
+    }
+    * { box-sizing: border-box; }
+    html,body { height: 100%; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      background: var(--bg); color: var(--text); line-height: 1.45;
+      -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+    }
+    header { padding: 22px 18px 10px; text-align: center; }
+    h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .2px; }
+    .wrap { max-width: 860px; margin: 0 auto; padding: 0 14px 24px; }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px;
+      margin-top: var(--gap); box-shadow: 0 8px 24px rgba(15,26,43,.06);
+    }
+    .row { display: flex; flex-wrap: wrap; gap: var(--gap); }
+    .row > * { flex: 1 1 260px; }
+    label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 6px; }
+    input[type=text], select {
+      width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: #fbfcfe; color: var(--text); outline: none;
+    }
+    input[type=checkbox] { transform: scale(1.05); }
+    input[type=text]:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(41,82,255,.12); }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      gap: 8px; padding: 12px 16px; border-radius: 12px; border: 1px solid var(--border);
+      color: var(--text); background: #f2f5fb; cursor: pointer; user-select: none;
+      text-decoration: none; font-weight: 600;
+    }
+    .btn:hover { filter: brightness(1.02); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.ghost { background: transparent; }
+    .btn[disabled] { opacity: .5; cursor: not-allowed; }
+    .btn-group { display:flex; gap: var(--gap); flex-wrap: wrap; }
+    .meta { font-size: 13px; color: var(--muted); }
+    .chips { display:flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: var(--chip); border:1px solid var(--border); font-size: 13px; cursor:pointer;}
+    .divider { height:1px; background: var(--border); margin: 14px -2px; }
+    .hidden { display:none !important; }
+    .big-word {
+      font-size: clamp(28px, 8vw, 52px);
+      letter-spacing: .06em; text-align: center; font-weight: 800;
+      margin: 14px 0 6px; text-transform: uppercase;
+    }
+    .big-sub { text-align:center; color: var(--muted); margin-bottom: 8px; }
+    .center { text-align:center; }
+    .num {
+      display:inline-flex; width: 28px; height: 28px; align-items:center; justify-content:center;
+      background:#eef2ff; color:#233875; border-radius: 8px; border:1px solid var(--border); font-weight:700;
+    }
+    details summary { cursor: pointer; color: var(--muted); }
+    footer { text-align:center; font-size: 12px; color: var(--muted); padding: 20px 0 40px; }
+    .countdown {
+      font-size: clamp(24px, 6vw, 40px); font-weight: 800; letter-spacing: .06em; text-align:center;
+      margin-top: 10px;
+    }
+    .overlay {
+      position: fixed; inset: 0; background: rgba(255,255,255,.92);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+      z-index: 50;
+    }
+    .overlay .box {
+      background: #ffffff; border:1px solid var(--border); border-radius: 16px; padding: 20px; max-width: 520px;
+      text-align: center; box-shadow: 0 10px 30px rgba(15,26,43,.08);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Impostor – gra słowna (1–10 osób)</h1>
+    <div class="meta">Hasło losuje się <strong>po starcie rundy</strong>, więc nikt nie zobaczy go wcześniej. Jedna losowa osoba ma kartę <strong>IMPOSTOR</strong>.</div>
+  </header>
+
+  <div class="wrap">
+    <!-- USTAWIENIA RUNDY -->
+    <div class="card" id="setup">
+      <div class="row">
+        <div>
+          <label for="playersCount">Liczba graczy (1–10)</label>
+          <select id="playersCount"></select>
+        </div>
+        <div>
+          <label for="deferRandom">
+            <input type="checkbox" id="deferRandom" checked />
+            Losuj słowo dopiero po rozpoczęciu rundy (rekomendowane)
+          </label>
+          <label for="customWord">Własne słowo (aktywnie gdy powyżej odznaczone)</label>
+          <input type="text" id="customWord" placeholder="np. 'wulkan'" disabled>
+          <div class="chips" id="chips"></div>
+        </div>
+        <div>
+          <label for="revealOrder">Kolejność pokazywania</label>
+          <select id="revealOrder"></select>
+        </div>
+        <div>
+          <label for="delaySec">Opóźnienie przekazania (sekundy)</label>
+          <select id="delaySec">
+            <option>5</option>
+            <option>3</option>
+            <option>7</option>
+            <option>10</option>
+          </select>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="btn-group">
+        <button class="btn primary" id="startBtn">Rozpocznij rundę</button>
+        <button class="btn" id="randomizeBtn" disabled>Losuj słowo teraz</button>
+        <button class="btn ghost" id="howBtn">Zasady</button>
+      </div>
+      <div class="meta" id="wordPickedNote" style="margin-top:10px;"></div>
+    </div>
+
+    <!-- EKRAN GRACZA -->
+    <div class="card hidden" id="playerScreen">
+      <div class="center">
+        <div class="big-sub">Teraz patrzy gracz <span id="playerNum" class="num">1</span></div>
+        <div class="big-word" id="secretWord">••••••</div>
+        <div class="meta" id="impostorNote" style="text-transform:uppercase; font-weight:800;"></div>
+        <div class="btn-group" style="justify-content:center; margin-top:12px;">
+          <button class="btn primary" id="doneBtn" title="Kliknij po przeczytaniu hasła">Przeczytałem – przekażę</button>
+        </div>
+        <div class="meta" style="margin-top:8px;">
+          Po kliknięciu przycisku nastąpi <span id="delayLabel">5</span>s odliczanie, a potem słowo pojawi się kolejnemu graczowi.
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY z odliczaniem -->
+    <div class="overlay hidden" id="handoffOverlay" aria-hidden="true">
+      <div class="box">
+        <div class="big-sub">Przekaż urządzenie następnemu graczowi:</div>
+        <div class="countdown"><span id="countdown">5</span>s</div>
+        <div class="meta" style="margin-top:8px;">Nie podglądaj poza swoją kolejką 🙂</div>
+      </div>
+    </div>
+
+    <!-- PANEL PROWADZĄCEGO -->
+    <div class="card hidden" id="hostPanel">
+      <div class="row">
+        <div>
+          <div class="meta">Runda trwa. Ujawniono: <span id="revealedCount">0</span>/<span id="totalPlayers">6</span></div>
+          <div class="chips" id="orderChips"></div>
+        </div>
+        <div class="center" style="align-self:center;">
+          <button class="btn" id="peekBtn">Podejrzyj słowo</button>
+          <button class="btn ghost" id="maskBtn">Schowaj</button>
+          <button class="btn primary" id="newRoundBtn">Nowa runda</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ZASADY -->
+    <div class="card hidden" id="rules">
+      <details open>
+        <summary><strong>Jak grać (skrót)</strong></summary>
+        <ol>
+          <li>Ustaw liczbę graczy. Zaznaczenie „Losuj po starcie” sprawia, że nikt nie widzi hasła wcześniej.</li>
+          <li>Po rozpoczęciu rundy słowo losuje się automatycznie i od razu widzi je gracz 1 (albo „IMPOSTOR”).</li>
+          <li>Po przeczytaniu gracz klika <strong>„Przeczytałem – przekażę”</strong>, włącza się odliczanie i ekran się chowa. Po nim słowo pojawia się następnemu.</li>
+        </ol>
+      </details>
+    </div>
+
+    <footer>Powodzenia i miłej zabawy! • Jasny motyw 🌤️</footer>
+  </div>
+
+  <script>
+    // 300 haseł startowych
+    const WORDS = [
+"wulkan","jaskinia","wiatrak","kompas","kajak","mecz","safari","pustynia","bursztyn","śnieżyca",
+"astronauta","mikroskop","tornado","latarnia","zatoka","serowarnia","opera","biblioteka","wystawa","przystań",
+"dron","akumulator","szachy","teleskop","papryczka","glina","gondola","pampas","żagiel","baobab",
+"igloo","sushi","fresk","fajerwerki","antena","podkowa","amfiteatr","trampolina","magma","pergamin",
+"lornetka","balon","rakieta","wiolonczela","fortepian","żyrafa","flaming","pingwin","krater","księżyc",
+"tropik","neon","foka","kaktus","lawenda","ulica","fontanna","most","tramwaj","żuraw",
+"ratusz","kawiarnia","cukiernia","rynek","port","wodospad","rzeka","jezioro","półwysep","klif",
+"kopalnia","huta","fabryka","młyn","stodoła","szklarnia","winnica","sad","plantacja","pasieka",
+"żaglówka","motorówka","katamaran","jachty","dok","kotwica","bosak","ster","lina","boja",
+"meduza","rafa","perła","latarnia_morska","foka_szara","albatros","orka","rekin","krab","konik_morski",
+"suszarka","czajnik","toster","mikser","piekarnik","zmywarka","odkurzacz","żelazko","pralka","lodówka",
+"zegarek","komputer","klawiatura","mysz","drukarka","słuchawki","mikrofon","kamera","tablet","smartfon",
+"wesołe_miasteczko","diabelski_młyn","kolejka_górska","karuzela","strzelnica","budka_z_lodami","namiot","ognisko","hamak","plecak",
+"kompasik","mapa","lina_wspinaczkowa","czapka","buty_trek","latarka","koc","termos","krzesiwo","gwizdek",
+"śnieg","bałwan","narty","snowboard","sanki","kurtka","gogle","stok","schronisko","śnieżka",
+"rower","hulajnoga","rolki","łyżworolki","kask","ochraniacze","pompka","łańcuch","dzwonek","błotnik",
+"piłka_nożna","bramka","rękawice","koszulka","flaga","gwizdek_sędziego","tablica_wyników","murawa","trybuny","kibic",
+"koszykówka","siatkówka","tenis","badminton","ping_pong","szermierka","łucznictwo","wioślarstwo","kajakarstwo","sztafeta",
+"tango","walc","polonez","mazurek","krakowiak","breakdance","hiphop","flamenco","samba","rumba",
+"farma","koń","krowa","świnia","owca","koza","kura","gęś","indyk","kaczka",
+"pszczoła","osa","biedronka","motyl","ważka","komar","mrówka","konik_polny","świerszcz","świetlik",
+"tulipan","róża","irys","fiołek","goździk","mak","stokrotka","chryzantema","lilia","orchidea",
+"piekarnia","apteka","warzywniak","księgarnia","kwiaciarnia","fryzjer","szewc","krawiec","poczta","bank",
+"muzeum","teatr","kino","filharmonia","galeria","akademia","uniwersytet","szkoła","boisko","sala_gimnastyczna",
+"samolot","helikopter","szybowiec","baloniki","spadochron","lotnisko","hangar","wieża_kontrolna","pas_startowy","tunele",
+"pociąg","lokomotywa","wagon","peron","dworzec","biletomat","kasownik","szynobus","metro","tramwaj_linia",
+"autobus","taksówka","hulajnoga_elektr","skuter","motocykl","garaż","parking","rondo","skrzyżowanie","sygnalizacja",
+"aparat","obiektyw","statyw","lampa_błyskowa","filtr","karta_pamięci","dronek","gimbal","slajd","klisza",
+"ciasto","tarta","babeczka","pączek","ptys","beza","sernik","szarlotka","makowiec","kremówka",
+"zupa","rosół","barszcz","żurek","pomidorowa","ogórkowa","grochówka","kapuśniak","chłodnik","ramen",
+"pizza","pierogi","kopytka","gołąbki","kotlet","schabowy","bigos","gulasz","leczo","sałatka",
+"kawa","herbata","lemoniada","kompot","sok","koktajl","kakao","gorąca_czekolada","napar","espresso",
+"wiedźma","rycerz","smok","mag","elf","krasnolud","troll","syrena","centaur","feniks",
+"nuta","gitara","skrzypce","trąbka","flet","bęben","harfa","saksofon","klarnet","banjo",
+"piorun","tęcza","chmura","mgła","burza","grad","rosa","szron","szkwał","ulewa"
+    ]; // 300 wpisów
+
+    // Pomocnicze
+    const $ = (sel)=>document.querySelector(sel);
+    function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+    function pickRandomWord(){ return WORDS[Math.floor(Math.random()*WORDS.length)].replaceAll('_',' '); }
+    function note(html){ wordPickedNote.innerHTML = html; }
+
+    // Stan gry
+    let state = {
+      n: 6,
+      word: null,
+      impostorIndex: null, // 0..n-1
+      order: [],
+      current: 0, // indeks w order
+      revealed: [],
+      delayMs: 5000,
+    };
+
+    // Elementy
+    const playersCount = $('#playersCount');
+    const setup = $('#setup');
+    const playerScreen = $('#playerScreen');
+    const hostPanel = $('#hostPanel');
+    const rules = $('#rules');
+    const startBtn = $('#startBtn');
+    const randomizeBtn = $('#randomizeBtn');
+    const howBtn = $('#howBtn');
+    const deferRandom = $('#deferRandom');
+    const customWord = $('#customWord');
+    const revealOrder = $('#revealOrder');
+    const delaySec = $('#delaySec');
+    const delayLabel = $('#delayLabel');
+    const wordPickedNote = $('#wordPickedNote');
+    const playerNum = $('#playerNum');
+    const secretWord = $('#secretWord');
+    const impostorNote = $('#impostorNote');
+    const doneBtn = $('#doneBtn');
+    const revealedCount = $('#revealedCount');
+    const totalPlayers = $('#totalPlayers');
+    const orderChips = $('#orderChips');
+    const peekBtn = $('#peekBtn');
+    const maskBtn = $('#maskBtn');
+    const newRoundBtn = $('#newRoundBtn');
+    const chipsBox = $('#chips');
+    const overlay = $('#handoffOverlay');
+    const countdownEl = $('#countdown');
+
+    function populatePlayerCount(){
+      playersCount.innerHTML = '';
+      for (let i=1;i<=10;i++){
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = i;
+        if (i===6) opt.selected = true;
+        playersCount.appendChild(opt);
+      }
+    }
+
+    function populateOrderOptions(){
+      const n = parseInt(playersCount.value,10);
+      revealOrder.innerHTML = '';
+      const optShuffle = document.createElement('option');
+      optShuffle.value = 'shuffle'; optShuffle.textContent = 'Losowa (polecane)';
+      revealOrder.appendChild(optShuffle);
+      const forward = document.createElement('option');
+      forward.value = Array.from({length:n},(_,i)=>i+1).join(',');
+      forward.textContent = `1 → ${n}`; revealOrder.appendChild(forward);
+      const backward = document.createElement('option');
+      backward.value = Array.from({length:n},(_,i)=>n-i).join(',');
+      backward.textContent = `${n} → 1`; revealOrder.appendChild(backward);
+      revealOrder.value = 'shuffle';
+    }
+
+    function buildOrder(){
+      const n = state.n;
+      const val = revealOrder.value;
+      if (val === 'shuffle') state.order = shuffle(Array.from({length:n},(_,i)=>i+1));
+      else state.order = val.split(',').map(Number);
+      orderChips.innerHTML = '';
+      state.order.forEach((num,i) => {
+        const c = document.createElement('div');
+        c.className = 'chip';
+        c.textContent = `${i+1}. gracz ${num}`;
+        orderChips.appendChild(c);
+      });
+    }
+
+    function renderForCurrent(){
+      if (state.current >= state.n){
+        secretWord.textContent = 'Koniec ujawniania'; impostorNote.textContent = 'Czas na podpowiedzi!'; playerNum.textContent = '—';
+        playerScreen.classList.add('hidden'); note('Wszyscy poznali swoje role.'); return;
+      }
+      const idx = state.order[state.current]-1;
+      playerNum.textContent = state.order[state.current];
+      const isImpostor = (idx === state.impostorIndex);
+      secretWord.textContent = isImpostor ? 'IMPOSTOR' : (state.word || '—').toUpperCase();
+      impostorNote.textContent = isImpostor ? 'Jesteś IMPOSTOREM – blefuj!' : '';
+    }
+
+    function updateHost(){
+      const count = state.revealed.filter(Boolean).length;
+      revealedCount.textContent = count;
+      const tp = document.getElementById('totalPlayers');
+      if (tp) tp.textContent = state.n;
+      Array.from(orderChips.children).forEach((chip, i) => {
+        chip.style.borderColor = i === state.current ? 'var(--accent)' : 'var(--border)';
+        chip.style.background = i < state.current ? '#f4f6fc' : '#ffffff';
+        chip.style.opacity = i < state.current ? .9 : 1;
+      });
+    }
+
+    function startRound(){
+      state.n = parseInt(playersCount.value,10);
+      state.impostorIndex = Math.floor(Math.random()*state.n); // 0..n-1
+      state.current = 0;
+      state.revealed = Array.from({length: state.n}, ()=>false);
+      state.delayMs = parseInt(delaySec.value,10)*1000;
+      delayLabel.textContent = delaySec.value;
+      buildOrder();
+
+      // Hasło wybieramy dopiero TERAZ:
+      if (deferRandom.checked) {
+        state.word = pickRandomWord();
+        note('Hasło zostało wylosowane po starcie (ukryte).');
+      } else {
+        const cw = (customWord.value || '').trim();
+        state.word = cw ? cw : pickRandomWord();
+        note(cw ? 'Użyto własnego słowa.' : 'Wylosowano słowo.');
+      }
+
+      setup.classList.add('hidden');
+      playerScreen.classList.remove('hidden');
+      hostPanel.classList.remove('hidden');
+      rules.classList.add('hidden');
+      renderForCurrent(); // pokaż od razu graczowi 1
+      updateHost();
+    }
+
+    function handoffToNext(){
+      const idx = state.order[state.current]-1;
+      state.revealed[idx] = true;
+      state.current += 1;
+      updateHost();
+      renderForCurrent();
+    }
+
+    // Countdown overlay logic
+    let countdownTimer = null;
+    function startCountdown(){
+      const total = parseInt(delaySec.value,10);
+      let remain = total;
+      countdownEl.textContent = remain;
+      overlay.classList.remove('hidden');
+      overlay.setAttribute('aria-hidden','false');
+      clearInterval(countdownTimer);
+      countdownTimer = setInterval(()=>{
+        remain -= 1;
+        countdownEl.textContent = remain;
+        if (remain <= 0){
+          clearInterval(countdownTimer);
+          overlay.classList.add('hidden');
+          overlay.setAttribute('aria-hidden','true');
+          handoffToNext();
+        }
+      }, 1000);
+    }
+
+    // Events
+    startBtn.addEventListener('click', startRound);
+    howBtn.addEventListener('click', ()=> rules.classList.toggle('hidden'));
+    newRoundBtn.addEventListener('click', ()=>{
+      setup.classList.remove('hidden'); playerScreen.classList.add('hidden'); hostPanel.classList.add('hidden'); rules.classList.add('hidden'); customWord.focus();
+    });
+    revealOrder.addEventListener('change', buildOrder);
+    delaySec.addEventListener('change', ()=>{ delayLabel.textContent = delaySec.value; });
+    doneBtn.addEventListener('click', ()=>{
+      secretWord.textContent = '••••••';
+      impostorNote.textContent = '';
+      startCountdown();
+    });
+    playersCount.addEventListener('change', ()=>{
+      populateOrderOptions();
+      buildOrder();
+      updateHost();
+    });
+    deferRandom.addEventListener('change', ()=>{
+      const enabled = !deferRandom.checked;
+      customWord.disabled = !enabled;
+      randomizeBtn.disabled = !enabled;
+      note(enabled ? 'Możesz wpisać własne słowo lub wylosować przed startem.' : 'Hasło będzie losowane dopiero po starcie.');
+    });
+    randomizeBtn.addEventListener('click', ()=>{
+      if (randomizeBtn.disabled) return;
+      customWord.value = pickRandomWord();
+      note(`Wylosowano słowo: <strong>${customWord.value}</strong>`);
+    });
+
+    // Szybkie chipy
+    function buildChips(){
+      const sample = ["wulkan","latarnia","szachy","dron","opera","tornado","biblioteka","żagiel","igloo","trampolina"];
+      chipsBox.innerHTML = '';
+      sample.forEach(w=>{
+        const d=document.createElement('div'); d.className='chip'; d.textContent=w;
+        d.addEventListener('click',()=>{ if (!deferRandom.checked){ customWord.value = w; note(`Wybrano słowo: <strong>${w}</strong>`);} });
+        chipsBox.appendChild(d);
+      });
+    }
+
+    // Podgląd dla prowadzącego (1.2s)
+    let peekTimeout = null;
+    const peekBtnEl = document.getElementById('peekBtn');
+    if (peekBtnEl){
+      peekBtnEl.addEventListener('click', ()=>{
+        const was = secretWord.textContent;
+        secretWord.textContent = (state.word||'—').toUpperCase();
+        impostorNote.textContent = '(podgląd prowadzącego)';
+        clearTimeout(peekTimeout);
+        peekTimeout = setTimeout(()=>{ renderForCurrent(); }, 1200);
+      });
+    }
+    maskBtn.addEventListener('click', ()=>{ secretWord.textContent='••••••'; impostorNote.textContent=''; });
+
+    // Init
+    (function init(){
+      populatePlayerCount();
+      populateOrderOptions();
+      state.n = parseInt(playersCount.value,10);
+      buildOrder();
+      buildChips();
+      note('Hasło zostanie wylosowane po starcie.');
+    })();
+  </script>
+</body>
+</html>
